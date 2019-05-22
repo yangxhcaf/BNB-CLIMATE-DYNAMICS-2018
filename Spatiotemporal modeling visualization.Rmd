@@ -1,0 +1,99 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+
+```{r}
+
+# Trend - Line Chart
+# Objective: Visualize a trend in Rainfall in the BNB from 1998 - 2016 by year. I want to illustrate the changes over the time period. This is a very high-level view and only shows us a decline followed by a ramp up at the end of the period.
+#Load TRMM data 
+load("C:/Users/yassmin/Dropbox/PhD Thesis & Analysis/My PhD R work/TRMM3B43 nc4/TRMMdata9816.RData")
+# create Year variable
+TRMMdata9816$Year=as.numeric(format(TRMMdata9816$date_start,'%Y'))
+# Create DateTime as.POSIXct
+TRMMdata9816$DateTime  <- as.POSIXct(TRMMdata9816$date_start, tz="UTC", format="%Y%m%d %H%M%S")
+TRMMdata9816$DateTime = TRMMdata9816$DateTime - 3600
+TRMMdata9816$DateTime = TRMMdata9816$DateTime - 3600
+# Create 
+library(dplyr)
+library(tidyr)
+library(magrittr)
+df=TRMMdata9816 %>% 
+  group_by(Year) %>%
+  summarise(yearly.rain=sum(precipitation))
+library(ggplot2)
+library(lubridate)
+library(scales)
+p = ggplot(df,aes(x=Year,y=yearly.rain,group=1)) 
+p + geom_line(stat='identity') + 
+  theme(plot.title = element_text(hjust = 0.5),plot.subtitle = element_text(hjust = 0.5)) + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) + 
+  scale_y_continuous(labels = comma)
+
+
+library(magrittr)
+library(tidyr)
+library(dplyr)
+TRMMdata9816 %>% 
+  mutate(ID = group_indices_(TRMMdata9816, .dots = c("lon", "lat")))
+comb <- with(TRMMdata9816, paste(lat, lon))
+within(TRMMdata9816, ID <- match(comb, unique(comb)))
+
+library(data.table)
+TRMMdata9816 <- data.table(TRMMdata9816, key="lat,lon")
+TRMMdata9816[, Cluster_ID:=.GRP, by=key(TRMMdata9816)]
+TRMMdata9816
+
+
+df = TRMMdata9816%>%
+  group_by(Cluster_ID, Year) %>%
+  summarise(yearly.rain=sum(precipitation))
+ 
+df$Year = as.numeric(df$Year)
+df$Cluster_ID = as.character(df$Cluster_ID)
+
+ 
+p = ggplot(df,aes(x=Year,y=yearly.rain,col=Cluster_ID))
+p + geom_line(stat='identity') + 
+  theme(plot.title = element_text(hjust = 0.5)) + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+library(magrittr)
+library(tidyr)
+library(dplyr)
+n=10 #Arbitrary at first, after trying a few, this made the most sense
+topN = TRMMdata9816 %>%
+  group_by(Cluster_ID) %>%
+  summarise(yearly.rain = sum(precipitation)) %>%
+  arrange(precipitation) %>%
+  top_n(n)
+
+df = TRMMdata9816 %>%
+  filter(Cluster_ID %in% topN$Cluster_ID) %>%
+  group_by(Year,Cluster_ID) %>%
+  summarise(yearly.rain = sum(precipitation))
+
+df$Year = as.numeric(df$Year)
+df$Cluster_ID = as.factor(df$Cluster_ID)
+
+p = ggplot(df,aes(x=Year,y=yearly.rain,group=1))
+p + geom_line(stat='identity') + 
+  theme(plot.title = element_text(hjust = 0.5)) + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) + 
+  facet_wrap(~Location) + 
+  scale_y_continuous(labels = comma) 
+
+p = ggplot(df,aes(x=reorder(Location,ThousandBarrel),y=ThousandBarrel))
+p + geom_boxplot() + 
+  scale_y_continuous(labels = comma) +
+  coord_flip()
+
+```
+```{r}
+
+```
+
+
